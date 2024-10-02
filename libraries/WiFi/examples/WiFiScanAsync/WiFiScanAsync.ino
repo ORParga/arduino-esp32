@@ -5,6 +5,8 @@
 */
 #include "WiFi.h"
 
+uint16_t Max_networksFound=0;
+
 void startWiFiScan() {
   Serial.println("Scan start");
   // WiFi.scanNetworks will return immediately in Async Mode.
@@ -12,6 +14,8 @@ void startWiFiScan() {
 }
 
 void printScannedNetworks(uint16_t networksFound) {
+  if(Max_networksFound<networksFound)Max_networksFound=networksFound;
+  
   if (networksFound == 0) {
     Serial.println("no networks found");
   } else {
@@ -46,7 +50,8 @@ void printScannedNetworks(uint16_t networksFound) {
     }
     Serial.println("");
     // Delete the scan result to free memory for code below.
-    WiFi.scanDelete();
+    // ESP32 needs time to delete the list
+    //WiFi.scanDelete();
   }
 }
 
@@ -68,11 +73,27 @@ void loop() {
   if (WiFiScanStatus < 0) {  // it is busy scanning or got an error
     if (WiFiScanStatus == WIFI_SCAN_FAILED) {
       Serial.println("WiFi Scan has failed. Starting again.");
+      //If there has been a previous successful scan, the list is cleared
+      //otherwise scanNetworks() does not count previously found WiFis
+
+      if(Max_networksFound>0)
+      {
+        Max_networksFound=0;
+        WiFi.scanDelete();
+      }
       startWiFiScan();
     }
     // other option is status WIFI_SCAN_RUNNING - just wait.
   } else {  // Found Zero or more Wireless Networks
     printScannedNetworks(WiFiScanStatus);
+    //If there has been a previous successful scan, the list is cleared
+    //otherwise scanNetworks() does not count previously found WiFis
+
+    if(Max_networksFound>0)
+    {
+      Max_networksFound=0;
+      WiFi.scanDelete();
+    }
     startWiFiScan();  // start over...
   }
 
